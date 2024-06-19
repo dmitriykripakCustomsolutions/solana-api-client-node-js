@@ -1,0 +1,10 @@
+{  
+  "dependencies": {
+    "@api/chainstack": "file:.api/apis/chainstack",
+    "@project-serum/serum": "^0.13.65",
+    "@solana/spl-token-registry": "^0.2.4574",
+    "@solana/web3.js": "^1.92.3",
+    "bn.js": "^5.2.1",
+    "node-fetch": "^3.3.2"
+  }
+}

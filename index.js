@@ -3,13 +3,25 @@ const { Market } = require('@project-serum/serum');
 const { BN } = require('bn.js');
 const fs = require('fs');
 const { TokenListProvider } = require('@solana/spl-token-registry');
-const { pause } = require('./utility.js');
+const { pause, getTransactionsSignatures, extractTransactionInfo, formatPerformanceTime, formatTimeWithMilliseconds } = require('./utility.js');
 
-const availableTokens = readTokenList();
-const nodeAddress = 'https://light-greatest-moon.solana-mainnet.quiknode.pro/b4a3d6b2d17c7a5eeb1a4e35e4def07c586c53da/'; 
-const fileToSaveData = '//Test.csv';
-const startBlockNumber = 270499992;
-const endBlockNumber = 270500002;
+const nodeAddress = 'https://cold-virulent-frost.solana-mainnet.quiknode.pro/57f32aded44aac31a70a1c25d6f8804943989421/'; 
+const fileToSaveData = '//test.csv';
+const startBlockNumber = 270508165;
+const endBlockNumber = 270519983;
+
+//Second sprint:
+// 270699992:270690704 - 1-st.csv
+// 270679991:270670410 - 2-nd.csv
+// 270659990:270639990 - 3-rd.csv
+// 270639989:270628228 - 4-th.csv
+// 270619988:270609014 - 5-th.csv
+// 270599987:270588059 - 6-th.csv
+// 270579986:270569299 - 7-th.csv
+// 270559985:270547847 - 8-th.csv
+// 270539984:270527738 - 9-th.csv
+// 270519983:270508165 - 10-th.csv
+
 
 // 270699992:270679992 - 1-st.csv
 // 270679991:270659991 - 2-nd.csv
@@ -23,57 +35,11 @@ const endBlockNumber = 270500002;
 // 270519983:270499992 - 10-th.csv
 
 
-
-async function saveTokenList() {
-    const tokenProvider = new TokenListProvider();
-    const tokenList = await tokenProvider.resolve();
-    // const filteredtokens = tokenList.filterByClusterSlug('mainnet-beta').getList();
-    const tokens = tokenList.getList();
-
-    mappedTokens = tokens.map(token => ({
-        address: token.address,
-        symbol: token.symbol,
-        name: token.name,
-    }));
-
-    const jsonData = JSON.stringify(mappedTokens, null, 2);
-
-    fs.writeFileSync(__dirname + '//tokens.json', jsonData, 'utf8');
-
-    return mappedTokens;
-}
-
-function readTokenList() {
-    try {
-        // Чтение файла
-        const data = fs.readFileSync(__dirname + '//tokens.json', 'utf8');
-        // Преобразование строки в массив JSON объектов
-        const jsonArray = JSON.parse(data);
-        return jsonArray;
-    } catch (err) {
-        console.error('Ошибка при чтении или парсинге файла:', err);
-        return null;
-    }
-}
-
-function getTransactionsSignatures(transactions) {
-    signatures = []
-    transactions.forEach(transaction => {            
-        if(transaction.meta.innerInstructions.length > 0){
-            signature = transaction.transaction.signatures[0];
-            signatures.push(signature)
-        }
-    });
-
-    return signatures;
-}
-
 async function getBlocks(slotStartNumber, slotEndNumber) {
     isOperationSuccess = false;
     while(!isOperationSuccess){
         try{
         const connection = new Connection(nodeAddress);
-        
         blocks = await connection.getBlocks(slotStartNumber, slotEndNumber);
         isOperationSuccess = true;
         return blocks;
@@ -87,97 +53,7 @@ async function getBlocks(slotStartNumber, slotEndNumber) {
     }
 }
 
-function getCurrencySymbol(instructionInfo){
-    currencySymbol = ''
-    if(availableTokens && availableTokens.length > 0 && instructionInfo.mint){
-        index = availableTokens.findIndex(_ => _.address === instructionInfo.mint)        
-        if(index > -1){
-            currencySymbol = availableTokens[index].symbol
-        } else {
-            currencySymbol = instructionInfo.mint
-        }
-    } else {
-        currencySymbol = 'not specified';
-    }
 
-    return currencySymbol;
-}
-
-function getCurrencyAmount(instructionInfo){
-    if(instructionInfo.tokenAmount){
-        return instructionInfo.tokenAmount.uiAmountString || instructionInfo.tokenAmount.uiAmount 
-        || convertToDecimal(instructionInfo.tokenAmount.amount, instructionInfo.tokenAmount.decimals);
-    } else {
-        return 'not specified';
-    }
-}
-
-function convertToDecimal(numberStr, decimals) {
-    if(numberStr && decimals){
-        const length = numberStr.length;
-
-        // Если длина строки меньше или равна количеству десятичных знаков,
-        // добавляем ведущие нули
-        if (length <= decimals) {
-            numberStr = '0'.repeat(decimals - length + 1) + numberStr;
-        }
-
-        // Вставляем десятичную точку на нужное место
-        const integerPart = numberStr.slice(0, length - decimals);
-        const fractionalPart = numberStr.slice(length - decimals);
-
-        // Собираем окончательное число
-        const decimalNumber = `${integerPart}.${fractionalPart}`;
-
-        // Преобразуем строку в число и возвращаем
-        return decimalNumber;
-    } else {
-        return 'not specified';
-    }
-}
-
-function extractTransactionInfo(transaction, block, slotNumber) {
-    try{
-        extractedInfo = {}
-        extractedInfo.slot = slotNumber;
-        extractedInfo.operationDate = block.blockTime ? new Date(block.blockTime * 1000) : 'no date';
-        extractedInfo.transactionSignature = (transaction.transaction && transaction.transaction.signatures) ? transaction.transaction.signatures[0] : 'not specified';
-        if(transaction.meta.innerInstructions.length > 0){
-            for (let index = 0; index < transaction.meta.innerInstructions.length; index++) {
-                innerInstruction = transaction.meta.innerInstructions[index];
-            
-                if(innerInstruction.instructions && innerInstruction.instructions.length > 0){
-                    
-                    for (let i = 0; i < innerInstruction.instructions.length; i++) {
-                        instruction = innerInstruction.instructions[i]
-                        if(instruction.parsed && instruction.parsed.info && instruction.parsed.info.tokenAmount){
-                            if(!extractedInfo.soldCurrencySymbol){
-                                extractedInfo.soldCurrencySymbol = getCurrencySymbol(instruction.parsed.info)
-                                extractedInfo.soldCurrencyAmount = getCurrencyAmount(instruction.parsed.info)
-                            } else {
-                                if(!extractedInfo.boughtCurrencySymbol){
-                                    boughtCurrencySymbol = getCurrencySymbol(instruction.parsed.info)
-                                    if(boughtCurrencySymbol !== 'not specified' && boughtCurrencySymbol !== extractedInfo.soldCurrencySymbol){
-                                        extractedInfo.boughtCurrencySymbol = boughtCurrencySymbol
-                                        extractedInfo.boughtCurrencyAmount = getCurrencyAmount(instruction.parsed.info)
-                                    }                                    
-                                } else{
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    break;
-                }
-            }
-        }
-
-        return extractedInfo;
-    } catch(err){
-        console.log(err)
-    }
-}
 
 async function saveTransactionsData(slotStartNumber) {
     isOperationSuccess = false;
@@ -290,36 +166,7 @@ function fileExists(filePath) {
     });
 }
 
-function formatPerformanceTime(duration) {
 
-    let seconds = Math.floor(duration / 1000);
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    seconds = seconds % 60;
-
-    const hoursStr = String(hours).padStart(2, '0');
-    const minutesStr = String(minutes).padStart(2, '0');
-    const secondsStr = String(seconds).padStart(2, '0');
-
-    return `${hoursStr}h:${minutesStr}m:${secondsStr}s`;
-}
-
-function formatTimeWithMilliseconds(duration) {
-    // Преобразуем миллисекунды в секунды и оставшиеся миллисекунды
-    let milliseconds = duration % 1000;
-    let seconds = Math.floor(duration / 1000);
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    seconds = seconds % 60;
-
-    // Форматируем строки с ведущими нулями для минут, секунд и миллисекунд
-    const hoursStr = String(hours).padStart(2, '0');
-    const minutesStr = String(minutes).padStart(2, '0');
-    const secondsStr = String(seconds).padStart(2, '0');
-    const millisecondsStr = String(milliseconds).padStart(3, '0');
-
-    return `${hoursStr}:${minutesStr}:${secondsStr}:${millisecondsStr}`;
-}
 
 (async () => {
     try{

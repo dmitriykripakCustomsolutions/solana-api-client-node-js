@@ -41,6 +41,7 @@ paidEndpoints=(
 start=$start_value
 url_index=0
 num_urls=${#paidEndpoints[@]}
+step=1
 
 # Loop through the range and create ranges, then run the node script
 while [ $start -le $end_value ]; do
@@ -52,8 +53,11 @@ while [ $start -le $end_value ]; do
     # Get the URL from the paidEndpoints array
     url=${paidEndpoints[$url_index]}
 
-    # Start an instance of the Node.js application with the current range and URL
-    $NODE_CMD index.js $start $end $url &
+    # Generate the filename
+    filename="${step}-${start}-${end}.csv"
+
+    # Start an instance of the Node.js application with the current range, URL and filename
+    $NODE_CMD index.js $start $end $url $filename &
 
     # Pause for 3 seconds before starting the next instance
     sleep 3
@@ -63,6 +67,9 @@ while [ $start -le $end_value ]; do
 
     # Increment URL index and wrap around if necessary
     url_index=$(( (url_index + 1) % num_urls ))
+
+    # Increment step
+    step=$((step + 1))
 done
 
 # Wait for all background processes to complete

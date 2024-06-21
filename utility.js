@@ -1,41 +1,11 @@
+const { readTokenList, getLastEntries } = require('./file-utilities.js');
+
+const availableTokens = readTokenList();
+
 function pause(milliseconds) {
     const start = Date.now();
     while (Date.now() - start < milliseconds) {
         // Do nothing
-    }
-}
-
-const availableTokens = readTokenList();
-
-async function saveTokenList() {
-    const tokenProvider = new TokenListProvider();
-    const tokenList = await tokenProvider.resolve();
-    // const filteredtokens = tokenList.filterByClusterSlug('mainnet-beta').getList();
-    const tokens = tokenList.getList();
-
-    mappedTokens = tokens.map(token => ({
-        address: token.address,
-        symbol: token.symbol,
-        name: token.name,
-    }));
-
-    const jsonData = JSON.stringify(mappedTokens, null, 2);
-
-    fs.writeFileSync(__dirname + '//tokens.json', jsonData, 'utf8');
-
-    return mappedTokens;
-}
-
-function readTokenList() {
-    try {
-        // Чтение файла
-        const data = fs.readFileSync(__dirname + '//tokens.json', 'utf8');
-        // Преобразование строки в массив JSON объектов
-        const jsonArray = JSON.parse(data);
-        return jsonArray;
-    } catch (err) {
-        console.error('Ошибка при чтении или парсинге файла:', err);
-        return null;
     }
 }
 
@@ -143,6 +113,23 @@ function extractTransactionInfo(transaction, block, slotNumber) {
     }
 }
 
+function getNewStartBlockNumber(filePath){
+    lastEntries = getLastEntries(filePath)
+    slotNumber = undefined
+    if(lastEntries && lastEntries.length > 0){
+        for (const entry of lastEntries) {
+            if(entry.slotNumber){
+                slotNumber = entry.slotNumber
+            }
+            break;
+        }
+        
+        return slotNumber;
+    }
+
+    return slotNumber;
+}
+
 function formatPerformanceTime(duration) {
 
     let seconds = Math.floor(duration / 1000);
@@ -174,15 +161,36 @@ function formatTimeWithMilliseconds(duration) {
     return `${hoursStr}:${minutesStr}:${secondsStr}:${millisecondsStr}`;
 }
 
+function getCommandLineArguments(){    
+    const args = process.argv.slice(2);
+
+    // Check if there are args    
+    if (args.length > 0) {
+        // Arguments provided by run-apps.sh script 
+        // $start $end $url $filename
+        return {
+            startBlockNumber: args[0],
+            endBlockNumber: args[1],
+            nodeAddress: args[2],
+            fileToSaveData:args[3]            
+        };
+    } else {
+        console.log('Command Line Arguments have not been provided');
+        const error = new Error('Command Line Arguments have not been provided');
+        error.code = -1;
+        throw error;
+    }
+}
+
 module.exports = {
     pause,
     availableTokens,
-    saveTokenList,
-    readTokenList,
     getCurrencySymbol,
     getTransactionsSignatures,
     getCurrencyAmount,
     extractTransactionInfo,
     formatPerformanceTime,
-    formatTimeWithMilliseconds
+    formatTimeWithMilliseconds,
+    getNewStartBlockNumber,
+    getCommandLineArguments
 };

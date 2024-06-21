@@ -3,12 +3,22 @@ const { Market } = require('@project-serum/serum');
 const { BN } = require('bn.js');
 const fs = require('fs');
 const { TokenListProvider } = require('@solana/spl-token-registry');
-const { pause, getTransactionsSignatures, extractTransactionInfo, formatPerformanceTime, formatTimeWithMilliseconds } = require('./utility.js');
+const { 
+        pause,
+        getTransactionsSignatures,
+        extractTransactionInfo,
+        formatPerformanceTime,
+        formatTimeWithMilliseconds,
+        getNewStartBlockNumber,
+        getCommandLineArguments
+     } = require('./utility.js');
+const { checkIfFileExist, readLastLinesOfExistingFile } = require('./file-utilities.js');     
+const { exit } = require('process');
 
-const nodeAddress = 'https://cold-virulent-frost.solana-mainnet.quiknode.pro/57f32aded44aac31a70a1c25d6f8804943989421/'; 
-const fileToSaveData = '//test.csv';
-const startBlockNumber = 270508165;
-const endBlockNumber = 270519983;
+// const nodeAddress = 'https://cold-virulent-frost.solana-mainnet.quiknode.pro/57f32aded44aac31a70a1c25d6f8804943989421/'; 
+// const fileToSaveData = '//test.csv';
+// const startBlockNumber = 270508165;
+// const endBlockNumber = 270519983;
 
 //Second sprint:
 // 270699992:270690704 - 1-st.csv
@@ -34,7 +44,6 @@ const endBlockNumber = 270519983;
 // 270539984:270519984 - 9-th.csv
 // 270519983:270499992 - 10-th.csv
 
-
 async function getBlocks(slotStartNumber, slotEndNumber) {
     isOperationSuccess = false;
     while(!isOperationSuccess){
@@ -52,8 +61,6 @@ async function getBlocks(slotStartNumber, slotEndNumber) {
         }
     }
 }
-
-
 
 async function saveTransactionsData(slotStartNumber) {
     isOperationSuccess = false;
@@ -154,43 +161,40 @@ async function addToCSV(csvData, slotNumber) {
     }
 }
 
-function fileExists(filePath) {
-    return new Promise((resolve) => {
-        fs.access(filePath, fs.constants.F_OK, (err) => {
-            if (err) {
-                resolve(false); // Файл не существует
-            } else {
-                resolve(true); // Файл существует
-            }
-        });
-    });
-}
-
-
-
+// Entry Point
 (async () => {
     try{
-        filePath = __dirname + fileToSaveData;
 
-        fileExists(filePath).then((exists) => {
-            if (exists) {
-                console.log(`Файл ${filePath} существует`);
-            } else {
-                fs.writeFileSync(filePath, 'slotNumber,operationDate,transactionSignature,soldCurrencySymbol,soldCurrencyAmount,boughtCurrencySymbol,boughtCurrencyAmount\r\n', 'utf8');
+        //commandLineArgs e.g. startBlockNumber: args[0],
+        // endBlockNumber: args[1],
+        // nodeAddress: args[2],
+        // fileToSaveData:args[3]       
+        commandLineArgs = getCommandLineArguments();
+
+        filePath = __dirname + commandLineArgs.fileToSaveData;
+        startBlockNumber = commandLineArgs.startBlockNumber;
+        endBlockNumber = commandLineArgs.endBlockNumber;
+        nodeAddress = commandLineArgs.nodeAddress; 
+
+        isFileExist = await checkIfFileExist(filePath);
+
+        if(isFileExist){
+            //In case if program has been broken and we launch it again
+            //it needs to update startBlockNumber
+            //considering already read and written data
+            
+            newStartBlockNumber = getNewStartBlockNumber(filePath);
+            if(newStartBlockNumber){
+                startBlockNumber = newStartBlockNumber;
+            } else if(newStartBlockNumber === endBlockNumber){
+                //Means all the blocks info already in the file
+                exit('Everything is in the file')
             }
-        });
+        } else {
+            fs.writeFileSync(filePath, 'slotNumber,operationDate,transactionSignature,soldCurrencySymbol,soldCurrencyAmount,boughtCurrencySymbol,boughtCurrencyAmount\r\n', 'utf8');
+        }
 
         const start = performance.now();                
-
-        // Get Block
-        // const connection = new Connection(nodeAddress);
-        // connection.getAccountInfoAndContext
-        // block = await connection.getBlock(271764469, { maxSupportedTransactionVersion: 0 });
-        // console.log(block)
-
-        // saveTransactionsData
-        // saveTransactionsData(startBlockNumber);
-
 
         finalizedBlocksNumbers = await getBlocks(startBlockNumber, endBlockNumber);        
 

@@ -7,6 +7,7 @@ const {
         pause,
         getTransactionsSignatures,
         extractTransactionInfo,
+        extractTransactionInfo_2v,
         formatPerformanceTime,
         formatTimeWithMilliseconds,
         getNewStartBlockNumber,
@@ -14,11 +15,7 @@ const {
      } = require('./utility.js');
 const { checkIfFileExist, readLastLinesOfExistingFile } = require('./file-utilities.js');     
 const { exit } = require('process');
-
-// const nodeAddress = 'https://cold-virulent-frost.solana-mainnet.quiknode.pro/57f32aded44aac31a70a1c25d6f8804943989421/'; 
-// const fileToSaveData = '//test.csv';
-// const startBlockNumber = 270508165;
-// const endBlockNumber = 270519983;
+const { time } = require('console');
 
 //Second sprint:
 // 270699992:270690704 - 1-st.csv
@@ -77,16 +74,20 @@ async function saveTransactionsData(slotStartNumber) {
             slotNumber = slotStartNumber
             if(block.transactions.length > 0) {
                 csvData = '';                
-                signatures = getTransactionsSignatures(block.transactions);
-                if(signatures && signatures.length > 0){
+                // signatures = getTransactionsSignatures(block.transactions);
+                // if(signatures && signatures.length > 0){
                     block.transactions.forEach(transaction => {
-                        if(signatures.indexOf(transaction.transaction.signatures[0]) > -1){
+                        // if(signatures.indexOf(transaction.transaction.signatures[0]) > -1){
                             dataToSave = extractTransactionInfo(transaction, block, slotNumber);
-                            csvData += `${dataToSave.slot},${dataToSave.operationDate},${dataToSave.transactionSignature},${dataToSave.soldCurrencySymbol},${dataToSave.soldCurrencyAmount},${dataToSave.boughtCurrencySymbol},${dataToSave.boughtCurrencyAmount}\n`;
-                        }
+
+                            // TODO
+                            if(dataToSave.transactionSignature && dataToSave.soldCurrencySymbol && dataToSave.soldCurrencyAmount && dataToSave.boughtCurrencySymbol && dataToSave.boughtCurrencyAmount){
+                                csvData += `${dataToSave.slot},${dataToSave.operationDate},${dataToSave.transactionSignature},${dataToSave.soldCurrencySymbol},${dataToSave.soldCurrencyAmount},${dataToSave.boughtCurrencySymbol},${dataToSave.boughtCurrencyAmount}\r\n`;
+                            }
+                        // }
                     });
                     addToCSV(csvData, slotNumber)
-                }
+                // }
             }
 
             // signatures = getTransactionsSignatures(block.transactions);
@@ -154,7 +155,7 @@ async function saveTransactionsData(slotStartNumber) {
 
 async function addToCSV(csvData, slotNumber) {
     try {
-        fs.appendFileSync(__dirname + fileToSaveData, csvData, 'utf8');
+        fs.appendFileSync(fileToSaveData, csvData, 'utf8');
         console.log(`Данные добавлены в файл ${fileToSaveData} для слота ${slotNumber}`);
     } catch (err) {
         console.error('Ошибка при добавлении данных в файл:', err);
@@ -165,33 +166,43 @@ async function addToCSV(csvData, slotNumber) {
 (async () => {
     try{
 
+        // const connection = new Connection("https://icy-quick-liquid.solana-mainnet.quiknode.pro/adc8831ac93026d837c40ff92282f4120a9bb6ef/");
+        // block = await connection.getBlock(271764298, { maxSupportedTransactionVersion: 0 });
+        // console.log(block);
         //commandLineArgs e.g. startBlockNumber: args[0],
         // endBlockNumber: args[1],
         // nodeAddress: args[2],
         // fileToSaveData:args[3]       
+
+        
+        
+        // block = await connection.getBlock(slotStartNumber, { maxSupportedTransactionVersion: 0 });
+
         commandLineArgs = getCommandLineArguments();
 
-        filePath = __dirname + commandLineArgs.fileToSaveData;
-        startBlockNumber = commandLineArgs.startBlockNumber;
-        endBlockNumber = commandLineArgs.endBlockNumber;
+        fileToSaveData = __dirname + "//"+ commandLineArgs.fileToSaveData;
+        startBlockNumber = parseInt(commandLineArgs.startBlockNumber);
+        endBlockNumber = parseInt(commandLineArgs.endBlockNumber);
         nodeAddress = commandLineArgs.nodeAddress; 
 
-        isFileExist = await checkIfFileExist(filePath);
+        isFileExist = await checkIfFileExist(fileToSaveData);
 
         if(isFileExist){
             //In case if program has been broken and we launch it again
             //it needs to update startBlockNumber
             //considering already read and written data
             
-            newStartBlockNumber = getNewStartBlockNumber(filePath);
+            newStartBlockNumber = await  getNewStartBlockNumber(fileToSaveData);
             if(newStartBlockNumber){
-                startBlockNumber = newStartBlockNumber;
-            } else if(newStartBlockNumber === endBlockNumber){
+                startBlockNumber = newStartBlockNumber + 1;
+            } 
+            if(newStartBlockNumber === endBlockNumber){
                 //Means all the blocks info already in the file
-                exit('Everything is in the file')
+                console.log('Everything is in the file')
+                exit()
             }
         } else {
-            fs.writeFileSync(filePath, 'slotNumber,operationDate,transactionSignature,soldCurrencySymbol,soldCurrencyAmount,boughtCurrencySymbol,boughtCurrencyAmount\r\n', 'utf8');
+            fs.writeFileSync(fileToSaveData, 'slotNumber,operationDate,transactionSignature,soldCurrencySymbol,soldCurrencyAmount,boughtCurrencySymbol,boughtCurrencyAmount\r\n', 'utf8');
         }
 
         const start = performance.now();                
@@ -212,7 +223,7 @@ async function addToCSV(csvData, slotNumber) {
         const duration = end - start;
         spentTime = formatPerformanceTime(duration)
 
-        fs.appendFileSync(__dirname + fileToSaveData, `Time spent: ${spentTime}\r\n`, 'utf8');
+        fs.appendFileSync(fileToSaveData, `Time spent: ${spentTime}\r\n`, 'utf8');
 
     } catch(err){
         console.log(err)        

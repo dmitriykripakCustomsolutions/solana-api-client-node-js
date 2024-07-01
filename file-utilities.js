@@ -35,16 +35,16 @@ async function readLastLinesOfExistingFile(filePath){
       }
 }
 
-async function parseLinesToObjects(lines) {
+function parseLinesToObjects(lines) {
     const results = [];
-    const linesArray = lines.split('\n').filter(line => line.trim() !== ''); // Разделение на строки и фильтрация пустых строк
+    const linesArray = lines.split('\r\n').filter(line => line.trim() !== ''); // Разделение на строки и фильтрация пустых строк
   
     for (const line of linesArray) {
       const data = line.split(','); // Предполагая, что поля разделены запятыми
       
-      if(data && data.length === 7){
+      if(data && data.length === 7 && !isNaN(data[0])){
         const record = {
-            slotNumber: data[0],
+            slotNumber: parseInt(data[0]),
             operationDate: data[1],
             transactionSignature: data[2],
             soldCurrencySymbol: data[3],

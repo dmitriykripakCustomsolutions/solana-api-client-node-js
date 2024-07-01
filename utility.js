@@ -1,6 +1,8 @@
 const { readTokenList, getLastEntries } = require('./file-utilities.js');
 
 const availableTokens = readTokenList();
+const raydiumWalletAccount = '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1';
+const wrappedSOLToken = 'So11111111111111111111111111111111111111112';
 
 function pause(milliseconds) {
     const start = Date.now();
@@ -74,7 +76,11 @@ function extractTransactionInfo(transaction, block, slotNumber) {
     try{
         extractedInfo = {}
         extractedInfo.slot = slotNumber;
-        extractedInfo.operationDate = block.blockTime ? new Date(block.blockTime * 1000) : 'no date';
+        //Parsed time
+        // extractedInfo.operationDate = block.blockTime ? new Date(block.blockTime * 1000) : 'no date';
+
+        //Time in timestamp formate
+        extractedInfo.operationDate = block.blockTime;
         extractedInfo.transactionSignature = (transaction.transaction && transaction.transaction.signatures) ? transaction.transaction.signatures[0] : 'not specified';
         if(transaction.meta.innerInstructions.length > 0){
             for (let index = 0; index < transaction.meta.innerInstructions.length; index++) {
@@ -113,11 +119,63 @@ function extractTransactionInfo(transaction, block, slotNumber) {
     }
 }
 
-function getNewStartBlockNumber(filePath){
-    lastEntries = getLastEntries(filePath)
+function extractTransactionInfo_2v(transaction, block, slotNumber) {
+    try{
+        extractedInfo = {}
+        extractedInfo.slot = slotNumber;
+        //Time in timestamp formate
+        extractedInfo.operationDate = block.blockTime;
+        extractedInfo.transactionSignature = (transaction.transaction && transaction.transaction.signatures) ? transaction.transaction.signatures[0] : 'not specified';
+        
+        //csvData += slot,operationDate,transactionSignature,soldCurrencySymbol,soldCurrencyAmount,boughtCurrencySymbol,boughtCurrencyAmount
+        
+        postTokenBalances = getTokenBalances('postTokenBalances', transaction);
+        preTokenBalances = getTokenBalances('preTokenBalances', transaction);
+
+        isRaydium = checkIfRaydiumDexAndSOL(postTokenBalances);
+
+        if(isRaydium){
+            console.log('Raydium DEX caught');
+
+            extractedTradeData = extractTradeData(postTokenBalances, preTokenBalances, transaction);
+        }
+
+        return extractedInfo;
+    } catch(err){
+        console.log(err)
+    }
+}
+
+function getTokenBalances(tokenBalancesType, transaction) {
+    if(transaction.meta && transaction.meta[tokenBalancesType] 
+        && transaction.meta && transaction.meta[tokenBalancesType].length > 0) {   
+            
+            humanOwnerAddress = getHumanOwnerAddress(transaction);
+            
+            return transaction.meta[tokenBalancesType].map(item => ({
+                mint: item.mint,
+                owner: item.owner, 
+                ownerType: item.owner === humanOwnerAddress ? 'human' : 'DEX',
+                programId: item.programId,
+                uiAmount: item.uiTokenAmount.uiAmount
+              }));
+    }
+
+    return [];
+}
+
+function checkIfRaydiumDexAndSOL(postTokenBalances){
+    return (postTokenBalances[1].owner ===  raydiumWalletAccount
+    || (postTokenBalances[2].owner && postTokenBalances[2].owner === raydiumWalletAccount)) 
+    && (postTokenBalances[1].mint === wrappedSOLToken || (postTokenBalances[2].mint 
+        && postTokenBalances[2].mint === wrappedSOLToken));
+}
+
+async function getNewStartBlockNumber(filePath){
+    lastEntries = await getLastEntries(filePath)
     slotNumber = undefined
     if(lastEntries && lastEntries.length > 0){
-        for (const entry of lastEntries) {
+        for (const entry of lastEntries.reverse()) {
             if(entry.slotNumber){
                 slotNumber = entry.slotNumber
             }
@@ -128,6 +186,37 @@ function getNewStartBlockNumber(filePath){
     }
 
     return slotNumber;
+}
+
+function getHumanOwnerAddress(transaction){
+    return transaction.meta['postTokenBalances'][0];
+}
+
+function extractTradeData(postTokenBalances, preTokenBalances, transaction){
+    humanPostTokenBalances = postTokenBalances.filter(_ => _.ownerType === 'human');
+    humanPreTokenBalances = preTokenBalances.filter(_ => _.ownerType === 'human');
+    
+    humanPostTokenBalances.forEach
+
+    if(humanPostTokenBalances.length > 2){
+        return { soldCurrencySymbol: 'There are more than 2 human entries'};
+    }
+
+
+    
+    for (let index = 0; index < postTokenBalances.length; index++) {        
+        if(postTokenBalances[index].owner === getHumanOwnerAddress(transaction)){
+
+        } else {
+
+        }
+        
+    }
+    // if(Math.abs(postTokenBalances[0].uiAmount - preTokenBalances[0].uiAmount) 
+    // === Math.abs(postTokenBalances[1].uiAmount - preTokenBalances[1].uiAmount))
+    // && Math.abs(postTokenBalances[1].uiAmount - preTokenBalances[1].uiAmount) 
+    // === Math.abs(postTokenBalances[1].uiAmount - preTokenBalances[1].uiAmount))
+    
 }
 
 function formatPerformanceTime(duration) {
@@ -189,6 +278,7 @@ module.exports = {
     getTransactionsSignatures,
     getCurrencyAmount,
     extractTransactionInfo,
+    extractTransactionInfo_2v,
     formatPerformanceTime,
     formatTimeWithMilliseconds,
     getNewStartBlockNumber,

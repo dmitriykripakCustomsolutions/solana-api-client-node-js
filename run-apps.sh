@@ -54,7 +54,7 @@ while [ $start -le $end_value ]; do
     url=${paidEndpoints[$url_index]}
 
     # Generate the filename
-    filename="${step}-${start}-${end}.csv"
+    filename="${step}.csv"
 
     # Start an instance of the Node.js application with the current range, URL and filename
     $NODE_CMD index.js $start $end $url $filename &

@@ -1,0 +1,15 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch Program",
+            "program": "${workspaceFolder}\\index.js",
+            "args": ["274273817", "274273817", "https://ultra-damp-season.solana-mainnet.quiknode.pro/2af57532b29cb63e468e9b2104fa6e0c1b2147aa/", "latest-blocks.csv"],
+        }
+    ]
+}

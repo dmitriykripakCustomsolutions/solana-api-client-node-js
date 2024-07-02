@@ -1,8 +1,9 @@
 const { readTokenList, getLastEntries } = require('./file-utilities.js');
+const Decimal = require('decimal.js');
 
 const availableTokens = readTokenList();
-const raydiumWalletAccount = '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1';
-const wrappedSOLToken = 'So11111111111111111111111111111111111111112';
+const RAYDIUM_OWNER = '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1';
+const SOL_MINT = 'So11111111111111111111111111111111111111112';
 
 function pause(milliseconds) {
     const start = Date.now();
@@ -119,56 +120,225 @@ function extractTransactionInfo(transaction, block, slotNumber) {
     }
 }
 
-function extractTransactionInfo_2v(transaction, block, slotNumber) {
+function extractTransactionInfo_Dimas(transaction, block_time, slotNumber) {
     try{
-        extractedInfo = {}
-        extractedInfo.slot = slotNumber;
-        //Time in timestamp formate
-        extractedInfo.operationDate = block.blockTime;
-        extractedInfo.transactionSignature = (transaction.transaction && transaction.transaction.signatures) ? transaction.transaction.signatures[0] : 'not specified';
+        transaction_id = transaction['transaction']['signatures'][0];
+        meta = transaction['meta'] ?? undefined;
         
-        //csvData += slot,operationDate,transactionSignature,soldCurrencySymbol,soldCurrencyAmount,boughtCurrencySymbol,boughtCurrencyAmount
-        
-        postTokenBalances = getTokenBalances('postTokenBalances', transaction);
-        preTokenBalances = getTokenBalances('preTokenBalances', transaction);
-
-        isRaydium = checkIfRaydiumDexAndSOL(postTokenBalances);
-
-        if(isRaydium){
-            console.log('Raydium DEX caught');
-
-            extractedTradeData = extractTradeData(postTokenBalances, preTokenBalances, transaction);
+        if(!meta){
+            return '';
         }
 
-        return extractedInfo;
+        post_balances = meta['postTokenBalances'] ?? undefined;
+        pre_balances = meta['preTokenBalances'] ?? undefined;
+
+        post_balance = process_post_balances(post_balances, transaction_id)
+        if(!post_balance){
+            return '';
+        }
+        
+        pre_balance = process_pre_balances(pre_balances, post_balance)
+        if(!pre_balance){
+            return '';
+        }
+
+        if (equal_diffs(post_balance, pre_balance)){
+
+            return fromResultData(transaction_id, block_time, slotNumber, post_balance, pre_balance)
+
+        } else{
+            return '';
+        }
+
     } catch(err){
         console.log(err)
     }
 }
 
-function getTokenBalances(tokenBalancesType, transaction) {
-    if(transaction.meta && transaction.meta[tokenBalancesType] 
-        && transaction.meta && transaction.meta[tokenBalancesType].length > 0) {   
-            
-            humanOwnerAddress = getHumanOwnerAddress(transaction);
-            
-            return transaction.meta[tokenBalancesType].map(item => ({
-                mint: item.mint,
-                owner: item.owner, 
-                ownerType: item.owner === humanOwnerAddress ? 'human' : 'DEX',
-                programId: item.programId,
-                uiAmount: item.uiTokenAmount.uiAmount
-              }));
+function fromResultData(transaction_id, block_time, slotNumber, post_balance, pre_balance){
+    trader = post_balance['trader']['id'];
+    timestamp = block_time.toString();
+    coin_address = '';
+
+    for (let i = 0; i < post_balance.pool.mints.length; i++) {
+        if(post_balance.pool.mints[i] !== SOL_MINT){
+            coin_address = post_balance.pool.mints[i];
+        }
     }
 
-    return [];
+    sol_amt_before = pre_balance['pool']['amounts'][SOL_MINT];
+    sol_amt_after = post_balance['pool']['amounts'][SOL_MINT];
+    coin_amt_before = pre_balance['pool']['amounts'][coin_address];
+    coin_amt_after = post_balance['pool']['amounts'][coin_address];
+
+    return `${slotNumber}, ${timestamp}, ${transaction_id}, ${trader}, ${coin_address}, ${sol_amt_before}, ${sol_amt_after}, ${coin_amt_before}, ${coin_amt_after}\r\n`;
 }
 
-function checkIfRaydiumDexAndSOL(postTokenBalances){
-    return (postTokenBalances[1].owner ===  raydiumWalletAccount
-    || (postTokenBalances[2].owner && postTokenBalances[2].owner === raydiumWalletAccount)) 
-    && (postTokenBalances[1].mint === wrappedSOLToken || (postTokenBalances[2].mint 
-        && postTokenBalances[2].mint === wrappedSOLToken));
+function process_post_balances(post_balances) {
+    if (post_balances.length === 0)
+        return undefined;
+
+    pool_mints = [];
+    pool_amounts = {};
+    trader_mints = [];
+    trader_amounts = {};
+    trader = '';
+
+    for (let i = 0; i < post_balances.length; i++) {
+        if(i === 0){
+            trader = post_balances[i].owner;
+            trader_mints.push(post_balances[i].mint);
+            trader_amounts[post_balances[i].mint] = new Decimal(post_balances[i].uiTokenAmount.uiAmountString);
+        } else {
+            if(post_balances[i].owner === trader){
+                trader_mints.push(post_balances[i].mint)
+                trader_amounts[post_balances[i].mint] = new Decimal(post_balances[i].uiTokenAmount.uiAmountString);
+            } else if (post_balances[i].owner === RAYDIUM_OWNER){
+                pool_mints.push(post_balances[i].mint)
+                pool_amounts[post_balances[i].mint] = new Decimal(post_balances[i].uiTokenAmount.uiAmountString);
+            }
+        }        
+    }
+
+    if(pool_mints.findIndex(_ => _ === SOL_MINT) < 0){
+        return undefined;
+    }
+
+    if(trader_mints.length > 2){
+        return undefined;
+    }
+
+    is_trader_mints_out = false;
+    for (let i = 0; i < trader_mints.length; i++) {
+        if(pool_mints.findIndex(_ => _ === trader_mints[i]) < 0){
+            is_trader_mints_out = true;
+        }
+    }
+
+    if(is_trader_mints_out){
+        return undefined;
+    }
+
+    result = {'trader': {'id': trader, 'mints': trader_mints, 'amounts': trader_amounts},
+              'pool': {'mints': pool_mints, 'amounts': pool_amounts}}
+    return result
+}
+
+function process_pre_balances(pre_balances, post_balance){
+    if(pre_balances.length === 0){
+        return undefined;
+    }
+
+    pool_mints = []
+    pool_amounts = {}
+    trader_mints = []
+    trader_amounts = {}
+    trader = post_balance.trader.id;
+    
+    for (let i = 0; i < pre_balances.length; i++) {
+        balance = pre_balances[i];
+        if (balance['owner'] == trader){
+            trader_mints.push(balance['mint'])
+            trader_amounts[balance['mint']] = new Decimal(balance.uiTokenAmount.uiAmountString);
+        } else if (balance['owner'] == RAYDIUM_OWNER) {
+            pool_mints.push(balance['mint'])
+            pool_amounts[balance['mint']] = new Decimal(balance.uiTokenAmount.uiAmountString);
+        }
+    }
+    
+    if(pool_mints.findIndex(_ => _ === SOL_MINT) < 0){
+        return undefined;
+    }
+
+    result = {'trader': {'id': trader, 'mints': trader_mints, 'amounts': trader_amounts},
+              'pool': {'mints': pool_mints, 'amounts': pool_amounts}}
+    return result
+}
+
+function equal_diffs(_post_balance, _pre_balance){
+
+    pool_diffs = get_pool_diffs(_post_balance, _pre_balance)
+
+    if (pool_diffs.length === 0){
+        return false;
+    }
+
+    sol_diff = false;
+    coin_diff = false;
+    sol_diff_sign = 1;
+    coin_diff_sign = 1;
+    
+    //Object.keys
+    Object.keys(pool_diffs).forEach(mint => {
+        if(mint === SOL_MINT){
+            if (pool_diffs[mint] !== 0){
+                sol_diff = true;
+                sol_diff_sign = pool_diffs[mint] > 0 ? 1 : -1;
+            }
+        } else {
+            if (pool_diffs[mint] !== 0){
+                coin_diff = true;
+                coin_diff_sign = pool_diffs[mint] > 0 ? 1 : -1;
+            }     
+        }
+    });
+
+    if(!sol_diff || !coin_diff){
+        return false;
+    }
+
+    if ((coin_diff_sign * sol_diff_sign) > 0){
+        return false;
+    }
+
+    trader_diffs = get_trader_diffs(_post_balance, _pre_balance)
+
+    is_equal_diffs = true;
+    
+    Object.keys(pool_diffs).forEach(mint => {
+        trader_diffs_mint = trader_diffs[mint] ? trader_diffs[mint] : 0;
+        trader_diffs_mint_negated = new Decimal(trader_diffs_mint).negated();
+        if(!new Decimal(pool_diffs[mint]).equals(trader_diffs_mint_negated)){
+            if (mint !== SOL_MINT && trader_diffs_mint !== 0){
+                is_equal_diffs = false;
+            }
+        }
+    });
+
+    return is_equal_diffs;
+}
+
+function get_pool_diffs(post_balance, pre_balance){
+    result = {}
+
+    for (let i = 0; i < post_balance.pool.mints.length; i++) {
+        mint = post_balance.pool.mints[i];
+        amounts = pre_balance.pool.amounts;
+        pre_value = amounts[mint] ? amounts[mint] : -1;
+
+        if (pre_value < 0){
+            return result;
+        }
+
+        diff = new Decimal(post_balance.pool.amounts[mint]).minus(new Decimal(pre_value));
+        if (diff != 0){
+            result[mint] = diff
+        }
+    }
+
+    return result;
+}    
+
+function get_trader_diffs(post_balance, pre_balance){
+    result = {};
+    for (let i = 0; i < post_balance.trader.mints.length; i++) {
+        mint = post_balance.trader.mints[i];
+        amounts = pre_balance.trader.amounts;
+        pre_value = amounts[mint] ? amounts[mint] : 0;
+        result[mint] = new Decimal(post_balance.trader.amounts[mint]).minus(new Decimal(pre_value));
+    }
+
+    return result
 }
 
 async function getNewStartBlockNumber(filePath){
@@ -188,36 +358,6 @@ async function getNewStartBlockNumber(filePath){
     return slotNumber;
 }
 
-function getHumanOwnerAddress(transaction){
-    return transaction.meta['postTokenBalances'][0];
-}
-
-function extractTradeData(postTokenBalances, preTokenBalances, transaction){
-    humanPostTokenBalances = postTokenBalances.filter(_ => _.ownerType === 'human');
-    humanPreTokenBalances = preTokenBalances.filter(_ => _.ownerType === 'human');
-    
-    humanPostTokenBalances.forEach
-
-    if(humanPostTokenBalances.length > 2){
-        return { soldCurrencySymbol: 'There are more than 2 human entries'};
-    }
-
-
-    
-    for (let index = 0; index < postTokenBalances.length; index++) {        
-        if(postTokenBalances[index].owner === getHumanOwnerAddress(transaction)){
-
-        } else {
-
-        }
-        
-    }
-    // if(Math.abs(postTokenBalances[0].uiAmount - preTokenBalances[0].uiAmount) 
-    // === Math.abs(postTokenBalances[1].uiAmount - preTokenBalances[1].uiAmount))
-    // && Math.abs(postTokenBalances[1].uiAmount - preTokenBalances[1].uiAmount) 
-    // === Math.abs(postTokenBalances[1].uiAmount - preTokenBalances[1].uiAmount))
-    
-}
 
 function formatPerformanceTime(duration) {
 
@@ -278,7 +418,7 @@ module.exports = {
     getTransactionsSignatures,
     getCurrencyAmount,
     extractTransactionInfo,
-    extractTransactionInfo_2v,
+    extractTransactionInfo_Dimas,
     formatPerformanceTime,
     formatTimeWithMilliseconds,
     getNewStartBlockNumber,

@@ -7,7 +7,7 @@ const {
         pause,
         getTransactionsSignatures,
         extractTransactionInfo,
-        extractTransactionInfo_2v,
+        extractTransactionInfo_Dimas,
         formatPerformanceTime,
         formatTimeWithMilliseconds,
         getNewStartBlockNumber,
@@ -17,29 +17,6 @@ const { checkIfFileExist, readLastLinesOfExistingFile } = require('./file-utilit
 const { exit } = require('process');
 const { time } = require('console');
 
-//Second sprint:
-// 270699992:270690704 - 1-st.csv
-// 270679991:270670410 - 2-nd.csv
-// 270659990:270639990 - 3-rd.csv
-// 270639989:270628228 - 4-th.csv
-// 270619988:270609014 - 5-th.csv
-// 270599987:270588059 - 6-th.csv
-// 270579986:270569299 - 7-th.csv
-// 270559985:270547847 - 8-th.csv
-// 270539984:270527738 - 9-th.csv
-// 270519983:270508165 - 10-th.csv
-
-
-// 270699992:270679992 - 1-st.csv
-// 270679991:270659991 - 2-nd.csv
-// 270659990:270639990 - 3-rd.csv
-// 270639989:270619989 - 4-th.csv
-// 270619988:270599988 - 5-th.csv
-// 270599987:270579987 - 6-th.csv
-// 270579986:270559986 - 7-th.csv
-// 270559985:270539985 - 8-th.csv
-// 270539984:270519984 - 9-th.csv
-// 270519983:270499992 - 10-th.csv
 
 async function getBlocks(slotStartNumber, slotEndNumber) {
     isOperationSuccess = false;
@@ -78,12 +55,17 @@ async function saveTransactionsData(slotStartNumber) {
                 // if(signatures && signatures.length > 0){
                     block.transactions.forEach(transaction => {
                         // if(signatures.indexOf(transaction.transaction.signatures[0]) > -1){
-                            dataToSave = extractTransactionInfo(transaction, block, slotNumber);
+                            // dataToSave = extractTransactionInfo(transaction, block, slotNumber);
 
-                            // TODO
-                            if(dataToSave.transactionSignature && dataToSave.soldCurrencySymbol && dataToSave.soldCurrencyAmount && dataToSave.boughtCurrencySymbol && dataToSave.boughtCurrencyAmount){
-                                csvData += `${dataToSave.slot},${dataToSave.operationDate},${dataToSave.transactionSignature},${dataToSave.soldCurrencySymbol},${dataToSave.soldCurrencyAmount},${dataToSave.boughtCurrencySymbol},${dataToSave.boughtCurrencyAmount}\r\n`;
+                            if(transaction.meta && transaction.meta['err']){
+                                return;
                             }
+
+                            csvData += extractTransactionInfo_Dimas(transaction, block.blockTime, slotNumber);
+                            
+                            // if(dataToSave && dataToSave.transactionSignature && dataToSave.soldCurrencySymbol && dataToSave.soldCurrencyAmount && dataToSave.boughtCurrencySymbol && dataToSave.boughtCurrencyAmount){
+                            //     csvData += `${dataToSave.slot},${dataToSave.operationDate},${dataToSave.transactionSignature},${dataToSave.soldCurrencySymbol},${dataToSave.soldCurrencyAmount},${dataToSave.boughtCurrencySymbol},${dataToSave.boughtCurrencyAmount}\r\n`;
+                            // }
                         // }
                     });
                     addToCSV(csvData, slotNumber)
@@ -202,7 +184,8 @@ async function addToCSV(csvData, slotNumber) {
                 exit()
             }
         } else {
-            fs.writeFileSync(fileToSaveData, 'slotNumber,operationDate,transactionSignature,soldCurrencySymbol,soldCurrencyAmount,boughtCurrencySymbol,boughtCurrencyAmount\r\n', 'utf8');
+            // fs.writeFileSync(fileToSaveData, 'slotNumber,operationDate,transactionSignature,soldCurrencySymbol,soldCurrencyAmount,boughtCurrencySymbol,boughtCurrencyAmount\r\n', 'utf8');
+            fs.writeFileSync(fileToSaveData, 'slotNumber, timestamp, transaction_id, trader, coin_address, sol_amt_before, sol_amt_after, coin_amt_before, coin_amt_after\r\n', 'utf8');
         }
 
         const start = performance.now();                

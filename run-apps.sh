@@ -25,16 +25,16 @@ CHUNK_SIZE=10000
 
 # Define the array of URLs
 paidEndpoints=(
-    'https://ultra-damp-season.solana-mainnet.quiknode.pro/2af57532b29cb63e468e9b2104fa6e0c1b2147aa/'
-    'https://cool-powerful-dinghy.solana-mainnet.quiknode.pro/fb5917038a4f8206c7466444a7ed19f3847cfd83/'
-    'https://radial-wandering-sky.solana-mainnet.quiknode.pro/a8c7a3afa19fbb1cea5a4aad3f78d2d72cf6a358/'
-    'https://magical-proud-frog.solana-mainnet.quiknode.pro/3817aca94165fbbb001ea1f8cb937900aac89875/'
-    'https://empty-distinguished-breeze.solana-mainnet.quiknode.pro/c6782a19f91f2fd1264f1086acf12c7f681d2b03/'
-    'https://ultra-small-seed.solana-mainnet.quiknode.pro/aa9e09f32840b400fce07292cad8222d2351c441/'
-    'https://light-greatest-moon.solana-mainnet.quiknode.pro/b4a3d6b2d17c7a5eeb1a4e35e4def07c586c53da/'
-    'https://cold-virulent-frost.solana-mainnet.quiknode.pro/57f32aded44aac31a70a1c25d6f8804943989421/'
-    'https://frequent-shy-mound.solana-mainnet.quiknode.pro/ee77d97ae68de4e4a09cb4a7c2d21fea60e49189/'
-    'https://icy-quick-liquid.solana-mainnet.quiknode.pro/adc8831ac93026d837c40ff92282f4120a9bb6ef/'
+    'https://wiser-withered-moon.solana-mainnet.quiknode.pro/c1d96607cc07a217b9e3795f0adc93289e26e73f/'
+    'https://white-broken-putty.solana-devnet.quiknode.pro/ca4aac452e33b2db507b9e908cf4d1468f46a576/'
+    'https://serene-thrilling-owl.solana-mainnet.quiknode.pro/e4b5267ce18bbbe870ab3a9a7126ffd9289affe8/'
+    'https://smart-still-dream.solana-mainnet.quiknode.pro/6931890891be4c5dfd8e7f1a52c45a12f9933b8d/'
+    'https://attentive-fragrant-needle.solana-mainnet.quiknode.pro/b31eff26d553ce237840c53fcf1df78928976282/'
+    'https://thrilling-aged-dew.solana-mainnet.quiknode.pro/7b5b7e38e30365f5478b147838820bee394a27b1/'
+    'https://thrilling-fragrant-lambo.solana-mainnet.quiknode.pro/e3ca80d91a580ba825d54df04902bc43ca068223/'
+    'https://quaint-newest-film.solana-mainnet.quiknode.pro/17a14f3e6587f587d74fe3d010b883bb23e97d36/'
+    'https://cool-alien-hexagon.solana-mainnet.quiknode.pro/3d8473343e0323898700d0538c523d84282dbae0/'
+    'https://proportionate-misty-cloud.solana-mainnet.quiknode.pro/e827e727841e39b815a3091dc0285516bc612916/'
 )
 
 # Initialize start value

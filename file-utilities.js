@@ -3,7 +3,7 @@ const util = require('util');
 const readLastLines = require('read-last-lines');
 
 const access = util.promisify(fs.access);
-
+const COUNT_OF_HEADERS = 9;
 
 async function checkIfFileExist(filePath) {
     try {
@@ -42,7 +42,7 @@ function parseLinesToObjects(lines) {
     for (const line of linesArray) {
       const data = line.split(','); // Предполагая, что поля разделены запятыми
       
-      if(data && data.length === 7 && !isNaN(data[0])){
+      if(data && data.length === COUNT_OF_HEADERS && !isNaN(data[0])){
         const record = {
             slotNumber: parseInt(data[0]),
             operationDate: data[1],

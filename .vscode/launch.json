@@ -2,6 +2,8 @@
     // Use IntelliSense to learn about possible attributes.
     // Hover to view descriptions of existing attributes.
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    // 275085038 275095037 csv 2
+    // 275185038 275195037 slots number transferred to 12.csv
     "version": "0.2.0",
     "configurations": [
         {
@@ -9,7 +11,11 @@
             "request": "launch",
             "name": "Launch Program",
             "program": "${workspaceFolder}\\index.js",
-            "args": ["275075038", "275085038", "https://wiser-withered-moon.solana-mainnet.quiknode.pro/c1d96607cc07a217b9e3795f0adc93289e26e73f/", "1.csv"],
+            "args": ["275085038", "275095037", "https://wiser-withered-moon.solana-mainnet.quiknode.pro/c1d96607cc07a217b9e3795f0adc93289e26e73f/", "2.csv"],
+
+
+
+
         }
     ]
 }

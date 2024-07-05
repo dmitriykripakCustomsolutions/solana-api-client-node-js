@@ -170,6 +170,7 @@ async function addToCSV(csvData, slotNumber) {
         isFileExist = await checkIfFileExist(fileToSaveData);
 
         if(isFileExist){
+            console.log(`${commandLineArgs.fileToSaveData} file exist`)
             //In case if program has been broken and we launch it again
             //it needs to update startBlockNumber
             //considering already read and written data
@@ -180,10 +181,11 @@ async function addToCSV(csvData, slotNumber) {
             } 
             if(newStartBlockNumber === endBlockNumber){
                 //Means all the blocks info already in the file
-                console.log('Everything is in the file')
+                console.log(`Everything is in the ${commandLineArgs.fileToSaveData} file`)
                 exit()
             }
         } else {
+            console.log(`${commandLineArgs.fileToSaveData} file doesn't exist`)
             // fs.writeFileSync(fileToSaveData, 'slotNumber,operationDate,transactionSignature,soldCurrencySymbol,soldCurrencyAmount,boughtCurrencySymbol,boughtCurrencyAmount\r\n', 'utf8');
             fs.writeFileSync(fileToSaveData, 'slotNumber, timestamp, transaction_id, trader, coin_address, sol_amt_before, sol_amt_after, coin_amt_before, coin_amt_after\r\n', 'utf8');
         }
@@ -191,6 +193,8 @@ async function addToCSV(csvData, slotNumber) {
         const start = performance.now();                
 
         finalizedBlocksNumbers = await getBlocks(startBlockNumber, endBlockNumber);        
+
+        console.log(`Counts of blocks for ${commandLineArgs.fileToSaveData} file : ${finalizedBlocksNumbers?.length}`)
 
         if(finalizedBlocksNumbers.length > 0){
             try{

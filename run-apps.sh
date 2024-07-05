@@ -55,7 +55,8 @@ while [ $start -le $end_value ]; do
 
     # Generate the filename
     filename="${step}.csv"
-
+	
+	echo "$start $end slots number transferred to $filename"
     # Start an instance of the Node.js application with the current range, URL and filename
     $NODE_CMD index.js $start $end $url $filename &
 
